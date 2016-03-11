@@ -15,6 +15,7 @@
 static uchar cbuf[MESG_DATA_SIZE]; // channel event data gets stored here
 static uchar ebuf[MESG_DATA_SIZE]; // response event data gets stored here
 
+int noprint = 0;
 int start = 0;
 int pcpod;
 
@@ -71,8 +72,9 @@ chevent(uchar chan, uchar event)
         if (oldrrs[chan] != oldrr)
           printf("bad oldrr old %04x new %04x\n", oldrrs[chan], oldrr);
       }
-      if (cbuf[seqoff] != (oldseq[chan]+1)%256) {
-        //printf("Bad seq# old %02x new %02x\n", oldseq[chan], cbuf[seqoff]);
+      if ((cbuf[seqoff] != (oldseq[chan]+1)%256) &&
+          (0 == noprint)) {
+        printf("Bad seq# old %02x new %02x\n", oldseq[chan], cbuf[seqoff]);
       }
       if (rr-oldrrs[chan] < 0)
         hrd = 60.0*1024.0/(double)(rr+65536-oldrrs[chan]);
@@ -101,20 +103,20 @@ revent(uchar chan, uchar event)
     return 0;
   } else if (event == MESG_CHANNEL_ID_ID) {
     devid = ebuf[1]+ebuf[2]*256;
-    //printf("devid %04x\n", devid);
+    printf("devid %04x\n", devid);
   } else if (event == 0x3d) {
     ebuf[9] = 0;
-    //printf("received %s\n", ebuf);
+    printf("received %s\n", ebuf);
     pcpod = 1;
     start = 1;
   } else if (event == INVALID_MESSAGE && ebuf[1] == MESG_REQUEST_ID) {
-    //printf("chan %d event %x %x %x\n", chan, event, ebuf[0], ebuf[1]);
+    printf("chan %d event %x %x %x\n", chan, event, ebuf[0], ebuf[1]);
     // not a PC POD
     pcpod = 0;
     start = 1;
-    //printf("not a pcpod %d\n", pcpod);
+    printf("not a pcpod %d\n", pcpod);
   } else {
-    //printf("xchan %d event %x %x %x\n", chan, event, ebuf[0], ebuf[1]);
+    printf("xchan %d event %x %x %x\n", chan, event, ebuf[0], ebuf[1]);
   }
   return 1;
 }
@@ -151,7 +153,7 @@ main(int ac, char *av[])
   char *devfile = "/dev/ttyUSB0"; // default
 
   progname = av[0];
-  while ((c = getopt(ac, av, "sgf:t:")) != -1) {
+  while ((c = getopt(ac, av, "sgif:t:")) != -1) {
     switch(c) {
       case 'f':
         devfile = optarg;
@@ -162,6 +164,9 @@ main(int ac, char *av[])
       case 'g':
         garmin = 1;
         break;
+    case 'i':
+      noprint = 1;
+      break;
       case 't':
         srchto = atoi(optarg);
         break;
