@@ -12,7 +12,15 @@
 
 #include "antdefs.h"
 
-#define S(e) if (-1 == (e)) {perror(#e);exit(1);} else
+#ifdef __GNUC__
+#  define UNUSED(x) UNUSED_ ## x __attribute__((__unused__))
+#else
+#  define UNUSED(x) UNUSED_ ## x
+#endif
+
+#define S(e) do {                              \
+    if (-1 == (e)) {perror(#e);exit(1);}       \
+  } while (0)
 
 #define MAXMSG 12 // SYNC,LEN,MSG,data[8],CHKSUM
 #define uchar unsigned char
@@ -235,7 +243,7 @@ get_data(int fd)
     bufc = 0;
 }
 
-void *commfn(void* arg)
+void *commfn()
 {
   fd_set readfds, writefds, exceptfds;
   int ready;
@@ -275,7 +283,7 @@ ANT_OpenRxScanMode(uchar chan)
 }
 
 uchar
-ANT_Initf(char *devname, ushort baud)
+ANT_Initf(char *devname, ushort UNUSED(baud))
 {
   struct termios tp;
 
@@ -299,12 +307,12 @@ ANT_Initf(char *devname, ushort baud)
   tp.c_cc[VTIME] = 0;
   S(tcsetattr(fd, TCSANOW, &tp));
 
-  if (pthread_create(&commthread, 0, commfn, 0));
+  pthread_create(&commthread, 0, commfn, 0);
   return 1;
 }
 
 uchar
-ANT_Init(uchar devno, ushort baud)
+ANT_Init(uchar devno, ushort UNUSED(baud))
 {
   char dev[40];
 
@@ -487,7 +495,9 @@ ANT_AssignResponseFunction(RESPONSE_FUNC rf, uchar* rbuf)
 }
 
 void
-ANT_AssignChannelEventFunction(uchar chan, CHANNEL_EVENT_FUNC rf, uchar* rbuf)
+ANT_AssignChannelEventFunction(uchar UNUSED(chan),
+                               CHANNEL_EVENT_FUNC rf,
+                               uchar* rbuf)
 {
   cfn = rf;
   cbufp = rbuf;
